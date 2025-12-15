@@ -1,13 +1,11 @@
 const hashPassword = require('../utils/hashPassword');
 const Role = require('../models/role.model');
 const User = require('../models/user.model');
-const path = require('path');
-const fs = require('fs');
+const { uploadToCloudinary } = require('../utils/multer');
 
 class UserService {
     static async findAll(options = {}) {
         const { offset, limit, search } = options;
-
         const whereClause = {};
         if (search) {
             const { Op } = require('sequelize');
@@ -21,85 +19,70 @@ class UserService {
             ];
         }
 
-        const queryOptions = {
+        return await User.findAndCountAll({
             where: whereClause,
-            include: {
-                model: Role,
-                as: 'role',
-                attributes: ['id', 'name']
-            },
+            include: { model: Role, as: 'role', attributes: ['id', 'name'] },
             offset,
             limit,
             order: [['createdAt', 'ASC']]
-        };
-
-        const users = await User.findAndCountAll(queryOptions);
-        return users;
+        });
     }
 
     static async findById(id) {
         const user = await User.findByPk(id, {
-            include: {
-                model: Role,
-                as: 'role',
-                attributes: ['id', 'name']
-            }
+            include: { model: Role, as: 'role', attributes: ['id', 'name'] }
         });
-
         if (!user) throw new Error('User không tồn tại');
         return user;
     }
 
     static async create(data, file) {
-        if (data.password) {
-            data.password = await hashPassword(data.password);
-        }
+        if (data.password) data.password = await hashPassword(data.password);
+
         if (file) {
-            data.image = `uploads/${file.filename}`;
+            const result = await uploadToCloudinary(file);
+            data.image = result.url;
+            data.image_public_id = result.public_id;
+            console.log(result.secure_url)
         }
 
-        const user = await User.create(data);
-        return user;
+        return await User.create(data);
     }
 
     static async update(id, data, file) {
-        const user = await User.findOne({ where: { id: id } });
+        const user = await User.findByPk(id);
         if (!user) throw new Error('User không tồn tại');
 
         if (data.password && data.password !== user.password) {
             data.password = await hashPassword(data.password);
-        } else {
-            delete data.password;
-        }
-        if (file) {
-            if (user.image) {
-                const oldImagePath = path.join(__dirname, '..', user.image);
+        } else delete data.password;
 
-                if (fs.existsSync(oldImagePath)) {
-                    fs.unlinkSync(oldImagePath);
-                }
+        if (file) {
+            // Xóa ảnh cũ trên Cloudinary
+            if (user.image_public_id) {
+                const cloudinary = require('../config/cloudinaryConfig');
+                await cloudinary.uploader.destroy(user.image_public_id);
             }
 
-            data.image = `uploads/${file.filename}`;
+            const result = await uploadToCloudinary(file);
+            data.image = result.url;
+            data.image_public_id = result.public_id;
         }
 
-        return await user.update(data)
+        return await user.update(data);
     }
 
     static async delete(id) {
         const user = await User.findByPk(id);
         if (!user) return 0;
 
-        if (user.image) {
-            const imagePath = path.join(__dirname, '..', user.image);
-            if (fs.existsSync(imagePath)) {
-                fs.unlinkSync(imagePath);
-            }
+        if (user.image_public_id) {
+            const cloudinary = require('../config/cloudinaryConfig');
+            await cloudinary.uploader.destroy(user.image_public_id);
         }
 
         return await User.destroy({ where: { id } });
     }
-
 }
 
 module.exports = UserService;

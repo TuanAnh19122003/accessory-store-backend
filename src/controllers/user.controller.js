@@ -1,6 +1,4 @@
 const UserService = require('../services/user.service');
-const path = require('path');
-const fs = require('fs');
 
 class UserController {
     async findAll(req, res) {
