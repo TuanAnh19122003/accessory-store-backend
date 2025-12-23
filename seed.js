@@ -20,6 +20,7 @@ const Contact = require('./src/models/contact.model');
 
 // Utils
 const { normalizeName } = require('./src/utils/normalizeName');
+const hashPassword = require('./src/utils/hashPassword');
 
 async function seed() {
     try {
@@ -39,19 +40,20 @@ async function seed() {
         console.log(`✅ Created ${roles.length} roles`);
 
         // ================= USERS =================
+        const hashedPassword = await hashPassword('123456');
         const users = await User.bulkCreate([
             {
                 firstname: 'Nguyễn',
                 lastname: 'Văn A',
                 email: 'admin@example.com',
-                password: '123456',
+                password: hashedPassword,
                 roleId: roles.find(r => r.code === 'ADMIN').id
             },
             {
                 firstname: 'Trần',
                 lastname: 'Thị B',
                 email: 'user@example.com',
-                password: '123456',
+                password: hashedPassword,
                 roleId: roles.find(r => r.code === 'USER').id
             }
         ]);

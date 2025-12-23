@@ -53,9 +53,9 @@ class UserService {
         const user = await User.findByPk(id);
         if (!user) throw new Error('User không tồn tại');
 
-        if (data.password && data.password !== user.password) {
+        if (data.password) {
             data.password = await hashPassword(data.password);
-        } else delete data.password;
+        }
 
         if (file) {
             // Xóa ảnh cũ trên Cloudinary
