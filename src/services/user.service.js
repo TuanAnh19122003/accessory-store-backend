@@ -53,8 +53,10 @@ class UserService {
         const user = await User.findByPk(id);
         if (!user) throw new Error('User không tồn tại');
 
-        if (data.password) {
+        if (data.password && data.password.trim() !== '') {
             data.password = await hashPassword(data.password);
+        } else {
+            delete data.password;
         }
 
         if (file) {
