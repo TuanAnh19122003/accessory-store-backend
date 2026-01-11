@@ -11,4 +11,6 @@ router.post('/', upload.single('image'), ProductController.create);
 router.put('/:id', upload.single('image'), ProductController.update);
 router.delete('/:id', ProductController.delete);
 
+router.post('/search-image', upload.single('image'), ProductController.searchByImage);
+
 module.exports = router;

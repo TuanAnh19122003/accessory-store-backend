@@ -120,6 +120,35 @@ class ProductController {
         }
     }
 
+    async searchByImage(req, res) {
+        try {
+            // Kiểm tra xem người dùng có gửi file lên không
+            if (!req.file) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Vui lòng cung cấp hình ảnh để tìm kiếm'
+                });
+            }
+
+            // Gọi Service xử lý AI
+            const result = await ProductService.searchByImage(req.file);
+
+            res.status(200).json({
+                success: true,
+                message: `Kết quả tìm kiếm cho vật thể: ${result.keyword}`,
+                data: result.products,
+                keyword: result.keyword
+            });
+        } catch (error) {
+            console.error('Lỗi Search Image Controller:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Đã xảy ra lỗi khi nhận diện hình ảnh',
+                error: error.message
+            });
+        }
+    }
+
 }
 
 module.exports = new ProductController();

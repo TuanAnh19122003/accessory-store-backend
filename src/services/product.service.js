@@ -4,6 +4,10 @@ const Discount = require('../models/discount.model');
 const { Op } = require('sequelize');
 const { uploadToCloudinary } = require('../utils/multer');
 const cloudinary = require('../config/cloudinaryConfig');
+const mobilenet = require('@tensorflow-models/mobilenet');
+const { createCanvas, loadImage } = require('canvas');
+require('@tensorflow/tfjs-backend-cpu');
+const tf = require('@tensorflow/tfjs');
 
 class ProductService {
     // Lấy tất cả sản phẩm
@@ -116,6 +120,91 @@ class ProductService {
         }
 
         return await Product.destroy({ where: { id } });
+    }
+
+    static async searchByImage(file) {
+        if (!file) throw new Error('Vui lòng cung cấp hình ảnh');
+
+        try {
+            await tf.setBackend('cpu');
+            await tf.ready();
+
+            let imageSource;
+            if (file.buffer) {
+                imageSource = file.buffer;
+            } else if (typeof file.path === 'string') {
+                if (file.path.startsWith('http')) {
+                    const response = await axios.get(file.path, { responseType: 'arraybuffer' });
+                    imageSource = Buffer.from(response.data);
+                } else {
+                    imageSource = path.resolve(file.path);
+                }
+            } else {
+                throw new Error('Định dạng file không được hỗ trợ bởi AI');
+            }
+
+            const img = await loadImage(imageSource);
+            const canvas = createCanvas(img.width, img.height);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            const model = await mobilenet.load();
+            const predictions = await model.classify(canvas);
+
+            if (!predictions || predictions.length === 0) {
+                throw new Error('AI không thể nhận diện được vật thể');
+            }
+
+            // Lấy nhãn thô từ AI (ví dụ: "purse, handbag")
+            const rawLabel = predictions[0].className.toLowerCase();
+
+            // --- BẢNG MAPPING GIỮA AI VÀ CATEGORY CỦA BẠN ---
+            const translationMap = {
+                'purse': 'Túi xách',
+                'handbag': 'Túi xách',
+                'backpack': 'Túi xách',
+                'wallet': 'Túi xách',
+                'sunglass': 'Kính mắt',
+                'sunglasses': 'Kính mắt',
+                'spectacles': 'Kính mắt',
+                'watch': 'Đồng hồ',
+                'clock': 'Đồng hồ',
+                'hat': 'Mũ nón',
+                'cap': 'Mũ nón',
+                'necklace': 'Trang sức',
+                'bracelet': 'Trang sức',
+                'ring': 'Trang sức',
+                'jewelry': 'Trang sức'
+            };
+
+            // Tìm từ khóa tiếng Việt tương ứng
+            let searchKeyword = '';
+            const foundKey = Object.keys(translationMap).find(key => rawLabel.includes(key));
+
+            if (foundKey) {
+                searchKeyword = translationMap[foundKey];
+            } else {
+                // Nếu không có trong mapping, lấy từ đầu tiên của AI
+                searchKeyword = rawLabel.split(',')[0].trim();
+            }
+
+            console.log(`AI Search: "${rawLabel}" ==> Tìm kiếm: "${searchKeyword}"`);
+
+            // Tìm kiếm trong DB bằng từ khóa đã ánh xạ
+            const searchResult = await this.findAll({
+                search: searchKeyword,
+                limit: 12
+            });
+
+            return {
+                keyword: searchKeyword,
+                products: searchResult.rows
+            };
+
+        } catch (error) {
+            console.error("AI Search Error Details:", error);
+            throw new Error("Lỗi nhận diện hình ảnh: " + error.message);
+        }
     }
 }
 

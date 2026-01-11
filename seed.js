@@ -24,42 +24,26 @@ const hashPassword = require('./src/utils/hashPassword');
 
 async function seed() {
     try {
-        // 1️⃣ Kết nối DB
         await sequelize.authenticate();
-        console.log('✅ Connected to Supabase PostgreSQL');
+        console.log('✅ Connected to Database');
 
-        // 2️⃣ Reset DB (Postgres OK)
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
         await sequelize.sync({ force: true });
-        console.log('✅ Database synced (force)');
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
+        console.log('✅ Database synced');
 
-        // ================= ROLES =================
         const roles = await Role.bulkCreate([
             { code: 'ADMIN', name: 'Quản trị viên' },
             { code: 'USER', name: 'Người dùng' }
         ]);
-        console.log(`✅ Created ${roles.length} roles`);
 
-        // ================= USERS =================
         const hashedPassword = await hashPassword('123456');
-        const users = await User.bulkCreate([
-            {
-                firstname: 'Nguyễn',
-                lastname: 'Văn A',
-                email: 'admin@example.com',
-                password: hashedPassword,
-                roleId: roles.find(r => r.code === 'ADMIN').id
-            },
-            {
-                firstname: 'Trần',
-                lastname: 'Thị B',
-                email: 'user@example.com',
-                password: hashedPassword,
-                roleId: roles.find(r => r.code === 'USER').id
-            }
-        ]);
-        console.log(`✅ Created ${users.length} users`);
+        await User.create({
+            firstname: 'Admin', lastname: 'Shop',
+            email: 'admin@example.com', password: hashedPassword,
+            roleId: roles.find(r => r.code === 'ADMIN').id
+        });
 
-        // ================= CATEGORIES =================
         const categories = await Category.bulkCreate([
             { code: 'PHU-KIEN-1', name: 'Túi xách' },
             { code: 'PHU-KIEN-2', name: 'Mũ nón' },
@@ -67,89 +51,89 @@ async function seed() {
             { code: 'PHU-KIEN-4', name: 'Đồng hồ' },
             { code: 'PHU-KIEN-5', name: 'Trang sức' }
         ]);
-        console.log(`✅ Created ${categories.length} categories`);
 
-        // ================= BRANDS =================
         const brands = await Brand.bulkCreate([
-            { name: 'Gucci' },
-            { name: 'Louis Vuitton' },
-            { name: 'Nike' },
-            { name: 'Adidas' },
-            { name: 'Pandora' }
+            { name: 'Gucci' }, { name: 'Louis Vuitton' }, { name: 'Nike' }, 
+            { name: 'Adidas' }, { name: 'Pandora' }, { name: 'Casio' }, { name: 'RayBan' }
         ]);
-        console.log(`✅ Created ${brands.length} brands`);
 
-        // ================= DISCOUNTS =================
-        const discounts = await Discount.bulkCreate([
+        // Dữ liệu ảnh thực tế - Đã test link hoạt động tốt
+        const aiTestData = [
             {
-                name: 'Giảm 10%',
-                description: 'Khuyến mãi 10%',
-                percentage: 10,
-                start_date: '2025-01-01',
-                end_date: '2025-12-31'
+                name: 'Túi xách', catIdx: 0,
+                images: [
+                    'https://images.unsplash.com/photo-1584917033904-49122a5c9602?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1566150905458-1bf1fd15dcb4?auto=format&fit=crop&w=600'
+                ]
             },
             {
-                name: 'Giảm 20%',
-                description: 'Khuyến mãi 20%',
-                percentage: 20,
-                start_date: '2025-01-01',
-                end_date: '2025-06-30'
+                name: 'Mũ nón', catIdx: 1,
+                images: [
+                    'https://images.unsplash.com/photo-1588850561427-d88855324c86?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1533055640609-24b498dfd74c?auto=format&fit=crop&w=600'
+                ]
+            },
+            {
+                name: 'Kính mắt', catIdx: 2,
+                images: [
+                    'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1511499767390-90342f53fb9a?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?auto=format&fit=crop&w=600'
+                ]
+            },
+            {
+                name: 'Đồng hồ', catIdx: 3,
+                images: [
+                    'https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1508685096489-7aac29f25346?auto=format&fit=crop&w=600'
+                ]
+            },
+            {
+                name: 'Trang sức', catIdx: 4,
+                images: [
+                    'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=600',
+                    'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=600'
+                ]
             }
-        ]);
-        console.log(`✅ Created ${discounts.length} discounts`);
-
-        // ================= PRODUCTS =================
-        const productNames = [
-            'Túi xách da nữ', 'Túi xách nam', 'Balo du lịch', 'Mũ lưỡi trai thể thao',
-            'Kính râm thời trang', 'Đồng hồ thể thao', 'Vòng tay bạc', 'Dây chuyền nữ',
-            'Ví da nam', 'Túi tote nữ', 'Balo laptop', 'Mũ len mùa đông',
-            'Đồng hồ thông minh', 'Nhẫn bạc nam', 'Khuyên tai nữ'
         ];
 
-        const colors = ['#FF5733', '#33FF57', '#3357FF', '#F1C40F', '#8E44AD'];
+        const productsData = [];
+        for (let i = 0; i < 50; i++) {
+            const group = aiTestData[i % aiTestData.length];
+            const brand = brands[Math.floor(Math.random() * brands.length)];
+            const randomImg = group.images[Math.floor(Math.random() * group.images.length)];
+            const productName = `${group.name} ${brand.name} ${faker.commerce.productAdjective()} ${i + 1}`;
 
-        const productsData = productNames.map((name, index) => {
-            const category = faker.helpers.arrayElement(categories);
-            const brand = faker.helpers.arrayElement(brands);
-            const discount = index % 4 === 0
-                ? faker.helpers.arrayElement(discounts)
-                : null;
-
-            return {
-                name,
-                slug: normalizeName(name),
-                price: faker.number.int({ min: 100000, max: 2000000 }),
-                color: faker.helpers.arrayElement(colors),
-                categoryId: category.id,
+            productsData.push({
+                name: productName,
+                slug: normalizeName(productName) + '-' + faker.string.alphanumeric(10),
+                price: faker.number.int({ min: 100000, max: 3000000 }),
+                color: faker.helpers.arrayElement(['Đen', 'Trắng', 'Vàng', 'Bạc']),
+                categoryId: categories[group.catIdx].id,
                 brandId: brand.id,
-                discountId: discount ? discount.id : null,
-                description: `Mô tả sản phẩm ${name}`,
+                description: `Sản phẩm ${productName} chính hãng. Hình ảnh rõ nét cho AI.`,
+                image: randomImg, // Link đã bao gồm tham số tối ưu
                 is_active: true,
-                is_featured: index % 3 === 0
-            };
-        });
+                is_featured: i % 5 === 0
+            });
+        }
 
         await Product.bulkCreate(productsData);
-        console.log(`✅ Created ${productsData.length} products`);
+        console.log(`✅ Created 50 products with valid images`);
 
-        // ================= CONTACTS =================
-        const contacts = await Contact.bulkCreate([
-            {
-                name: 'Nguyễn Văn C',
-                email: 'contact1@example.com',
-                subject: 'Hỗ trợ',
-                message: 'Tôi cần hỗ trợ về sản phẩm.'
-            },
-            {
-                name: 'Trần Thị D',
-                email: 'contact2@example.com',
-                subject: 'Góp ý',
-                message: 'Website rất tốt!'
-            }
-        ]);
-        console.log(`✅ Created ${contacts.length} contacts`);
+        await Contact.create({
+            name: 'Hệ thống test',
+            email: 'test@example.com',
+            subject: 'AI Search Test',
+            message: 'Dữ liệu đã sẵn sàng.'
+        });
 
-        console.log('🎉 SEED DATA COMPLETED SUCCESSFULLY');
+        console.log('🎉 SEED COMPLETED!');
         process.exit(0);
 
     } catch (error) {

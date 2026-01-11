@@ -14,8 +14,12 @@
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
     "@paypal/checkout-server-sdk": "^1.0.3",
+    "@tensorflow-models/mobilenet": "^2.1.1",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-backend-cpu": "^4.22.0",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
+    "canvas": "^3.2.1",
     "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
